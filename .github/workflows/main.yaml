@@ -2,7 +2,7 @@ name: Docker Build & Trivy Scan
 run-name: Build-push
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "deploying" ]
  
 jobs:
   build-and-scan:
