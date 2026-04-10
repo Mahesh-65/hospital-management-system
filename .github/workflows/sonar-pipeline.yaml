@@ -1,72 +1,69 @@
-name: SonarQube Scan Pipeline
+name: SonarQube Pipeline
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
-
-  build-and-scan:
+  scan:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Locate pom.xml
-        id: findpom
-        run: |
-          POM_PATH=$(find . -name "pom.xml" | head -n 1)
-          echo "Found pom at: $POM_PATH"
-          DIR=$(dirname "$POM_PATH")
-          echo "DIR=$DIR" >> $GITHUB_ENV
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/checkout@v3
         with:
-          distribution: 'temurin'
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
           java-version: '17'
 
-      - name: Build with Maven
-        run: mvn clean install
-        working-directory: ${{ env.DIR }}
-
-      - name: SonarQube Scan
+      - name: Build Project
         run: |
-          mvn sonar:sonar \
-          -Dsonar.projectKey=hospital-project \
-          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-        working-directory: ${{ env.DIR }}
+          mvn clean install -DskipTests
 
-      - name: Wait for Quality Gate
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        with:
-          scanMetadataReportFile: ${{ env.DIR }}/target/sonar/report-task.txt
+      # 🔍 SonarQube Scan
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-  notify:
-    needs: build-and-scan
-    runs-on: ubuntu-latest
-    if: always()
+      # 🚨 Quality Gate Check (FAILS pipeline if vulnerabilities exist)
+      - name: SonarQube Quality Gate
+        id: qualitygate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-    steps:
-      - name: Send Email
+      # ❌ Send failure mail
+      - name: Send Failure Email
+        if: failure()
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
-          server_port: 587
+          server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: ${{ needs.build-and-scan.result == 'success' && '✅ Build Success' || '❌ Build Failed' }}
-          to: devops-team@example.com
-          from: GitHub Actions
-          body: |
-            Pipeline Status: ${{ needs.build-and-scan.result }}
+          subject: "❌ Build Failed - Vulnerabilities Found"
+          body: "Pipeline failed due to security vulnerabilities. Check SonarQube dashboard."
+          to: ${{ secrets.DEVOPS_EMAIL }}
+          from: DevOps Alert
 
-            Repo: hospital-management-system
-            Branch: master
-
-            SonarQube Quality Gate enforced.
+      # ✅ Send success mail
+      - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "✅ Build Success - No Vulnerabilities"
+          body: "Pipeline passed successfully. No vulnerabilities found."
+          to: ${{ secrets.DEVOPS_EMAIL }}
+          from: DevOps Alert
