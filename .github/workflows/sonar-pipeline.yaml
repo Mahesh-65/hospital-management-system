@@ -21,13 +21,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 🔍 SonarQube Scan (CONFIG PASSED HERE)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         with:
           args: >
             -Dsonar.projectKey=hospital-management-system
-            -Dsonar.projectName="Hospital Management System"
             -Dsonar.sources=.
             -Dsonar.language=java
             -Dsonar.sourceEncoding=UTF-8
@@ -35,7 +33,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # 🚨 Quality Gate Check
       - name: SonarQube Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
@@ -43,7 +40,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # ❌ Send failure mail
       - name: Send Failure Email
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -53,11 +49,10 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "Build Failed - Vulnerabilities Found"
-          body: "Pipeline failed due to vulnerabilities. Check SonarQube."
+          body: "Pipeline failed due to vulnerabilities."
           to: ${{ secrets.DEVOPS_EMAIL }}
           from: DevOps Alert
 
-      # ✅ Send success mail
       - name: Send Success Email
         if: success()
         uses: dawidd6/action-send-mail@v3
