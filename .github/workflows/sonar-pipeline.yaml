@@ -1,0 +1,63 @@
+name: SonarQube Scan Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: SonarQube Scan
+        run: |
+          mvn sonar:sonar \
+          -Dsonar.projectKey=hospital-project \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+      - name: Wait for Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  notify:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Send Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: |
+            ${{ needs.build-and-scan.result == 'success' && '✅ Build Success' || '❌ Build Failed' }}
+          to: devops-team@example.com
+          from: GitHub Actions
+          body: |
+            Pipeline Status: ${{ needs.build-and-scan.result }}
+
+            Repo: hospital-management-system
+            Branch: main
+
+            Check SonarQube for details.
