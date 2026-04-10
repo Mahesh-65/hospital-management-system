@@ -14,8 +14,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Debug Repo Structure
-        run: ls -R
+      - name: Verify pom.xml location
+        run: find . -name "pom.xml"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -60,6 +60,6 @@ jobs:
             Pipeline Status: ${{ needs.build-and-scan.result }}
 
             Repo: hospital-management-system
-            Branch: main
+            Branch: master
 
             SonarQube Quality Gate enforced.
