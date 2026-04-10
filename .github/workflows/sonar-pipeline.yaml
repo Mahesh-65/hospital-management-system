@@ -21,9 +21,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 🔍 SonarQube Scan (no build needed)
+      # 🔍 SonarQube Scan (CONFIG PASSED HERE)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=hospital-management-system
+            -Dsonar.projectName="Hospital Management System"
+            -Dsonar.sources=.
+            -Dsonar.language=java
+            -Dsonar.sourceEncoding=UTF-8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -36,7 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # ❌ Failure Mail
+      # ❌ Send failure mail
       - name: Send Failure Email
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -46,11 +53,11 @@ jobs:
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "Build Failed - Vulnerabilities Found"
-          body: "Pipeline failed due to vulnerabilities."
+          body: "Pipeline failed due to vulnerabilities. Check SonarQube."
           to: ${{ secrets.DEVOPS_EMAIL }}
           from: DevOps Alert
 
-      # ✅ Success Mail
+      # ✅ Send success mail
       - name: Send Success Email
         if: success()
         uses: dawidd6/action-send-mail@v3
