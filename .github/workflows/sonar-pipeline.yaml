@@ -21,27 +21,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build Project
-        run: |
-          mvn clean install -DskipTests
-
-      # 🔍 SonarQube Scan
+      # 🔍 SonarQube Scan (no build needed)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # 🚨 Quality Gate Check (FAILS pipeline if vulnerabilities exist)
+      # 🚨 Quality Gate Check
       - name: SonarQube Quality Gate
-        id: qualitygate
         uses: SonarSource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # ❌ Send failure mail
+      # ❌ Failure Mail
       - name: Send Failure Email
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -50,12 +45,12 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "❌ Build Failed - Vulnerabilities Found"
-          body: "Pipeline failed due to security vulnerabilities. Check SonarQube dashboard."
+          subject: "Build Failed - Vulnerabilities Found"
+          body: "Pipeline failed due to vulnerabilities."
           to: ${{ secrets.DEVOPS_EMAIL }}
           from: DevOps Alert
 
-      # ✅ Send success mail
+      # ✅ Success Mail
       - name: Send Success Email
         if: success()
         uses: dawidd6/action-send-mail@v3
@@ -64,7 +59,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "✅ Build Success - No Vulnerabilities"
-          body: "Pipeline passed successfully. No vulnerabilities found."
+          subject: "Build Success - No Vulnerabilities"
+          body: "Pipeline passed successfully."
           to: ${{ secrets.DEVOPS_EMAIL }}
           from: DevOps Alert
